@@ -13,6 +13,10 @@ ALTER TABLE public.quotes ADD COLUMN IF NOT EXISTS customer_phone text;
 -- 변경: '정액', '평당', '시간', '개' (업계 표준 반영)
 -- ============================================================
 
+-- 기존 데이터 마이그레이션 (제약 추가 전에 실행해야 함)
+UPDATE public.service_items SET unit = '정액' WHERE unit = '회';
+UPDATE public.service_items SET unit = '평당' WHERE unit = '㎡';
+
 ALTER TABLE public.service_items DROP CONSTRAINT IF EXISTS service_items_unit_check;
 
 ALTER TABLE public.service_items
