@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAction } from 'next-safe-action/hooks'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,8 +20,6 @@ const loginSchema = z.object({
 type LoginInput = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
-  const router = useRouter()
-
   const {
     register,
     handleSubmit,
@@ -33,7 +30,7 @@ export default function LoginPage() {
 
   const { execute, isPending } = useAction(loginAction, {
     onSuccess: ({ data }) => {
-      if (data?.redirectTo) router.push(data.redirectTo)
+      if (data?.redirectTo) window.location.replace(data.redirectTo)
     },
     onError: ({ error }) => {
       toast.error(error.serverError ?? '로그인에 실패했습니다')

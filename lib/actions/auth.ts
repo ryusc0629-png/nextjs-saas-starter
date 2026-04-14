@@ -2,7 +2,7 @@
 
 import { z } from 'zod'
 import { action } from '@/lib/safe-action'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
 // 로그인 입력값 검증 스키마
@@ -31,8 +31,9 @@ export const loginAction = action
 
     if (error) throw new Error('이메일 또는 비밀번호가 올바르지 않습니다')
 
-    // 업체 등록 여부 확인 — 없으면 온보딩으로 이동
-    const { data: profile } = await supabase
+    // 업체 등록 여부 확인 — 서비스 롤로 조회 (로그인 직후 세션 쿠키 타이밍 문제 방지)
+    const db = createServiceClient()
+    const { data: profile } = await db
       .from('profiles')
       .select('business_id')
       .eq('id', data.user.id)

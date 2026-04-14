@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAction } from 'next-safe-action/hooks'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,8 +21,6 @@ const signupSchema = z.object({
 type SignupInput = z.infer<typeof signupSchema>
 
 export default function SignupPage() {
-  const router = useRouter()
-
   const {
     register,
     handleSubmit,
@@ -34,7 +31,7 @@ export default function SignupPage() {
 
   const { execute, isPending } = useAction(signupAction, {
     onSuccess: ({ data }) => {
-      if (data?.redirectTo) router.push(data.redirectTo)
+      if (data?.redirectTo) window.location.replace(data.redirectTo)
     },
     onError: ({ error }) => {
       toast.error(error.serverError ?? '회원가입에 실패했습니다')

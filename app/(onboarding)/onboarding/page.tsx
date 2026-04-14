@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAction } from 'next-safe-action/hooks'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -20,8 +19,6 @@ const onboardingSchema = z.object({
 type OnboardingInput = z.infer<typeof onboardingSchema>
 
 export default function OnboardingPage() {
-  const router = useRouter()
-
   const {
     register,
     handleSubmit,
@@ -33,9 +30,8 @@ export default function OnboardingPage() {
   const { execute, isPending } = useAction(createBusinessAction, {
     onSuccess: () => {
       toast.success('업체가 등록되었습니다!')
-      // refresh(): 서버 컴포넌트 캐시 초기화 후 이동
-      router.refresh()
-      router.push('/dashboard')
+      // 하드 내비게이션: 서버 컴포넌트 캐시를 완전히 우회
+      window.location.replace('/dashboard')
     },
     onError: ({ error }) => {
       toast.error(error.serverError ?? '업체 등록에 실패했습니다')

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/sidebar'
 
 // 대시보드 레이아웃 — 서버 컴포넌트에서 인증 검증 후 업체명 전달
@@ -8,20 +8,21 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  // 인증 확인: 일반 클라이언트 사용
   const supabase = await createClient()
-
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
 
-  // 업체 정보 조회
-  const { data: profile } = await supabase
+  // 업체 정보 조회: 서비스 롤 사용 (RLS 우회, 서버 전용)
+  const db = createServiceClient()
+  const { data: profile } = await db
     .from('profiles')
-    .select('business_id, businesses(name)')
+    .select('business_id, businesses!business_id(name)')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!profile?.business_id) redirect('/onboarding')
 
