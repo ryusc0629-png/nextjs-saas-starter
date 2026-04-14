@@ -36,7 +36,7 @@ const schema = z.object({
   name: z.string().min(1, '서비스명을 입력해주세요'),
   category: z.string().optional(),
   base_price: z.coerce.number().min(0, '0 이상의 금액을 입력해주세요'),
-  unit: z.enum(['정액', '평당', '개', '시간']),
+  unit: z.string().min(1, '단위를 선택해주세요'),
 })
 
 type FormInput = z.infer<typeof schema>

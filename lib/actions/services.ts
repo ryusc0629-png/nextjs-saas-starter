@@ -5,12 +5,17 @@ import { action } from '@/lib/safe-action'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-// 서비스 항목 생성 스키마
+const VALID_UNITS = ['정액', '평당', '시간', '개'] as const
+
+// 서비스 항목 생성 스키마 — z.enum() 대신 z.string().refine() 사용 (Zod v4 호환)
 const createServiceItemSchema = z.object({
   name: z.string().min(1, '서비스명을 입력해주세요'),
   category: z.string().optional(),
   base_price: z.coerce.number().min(0, '0 이상의 금액을 입력해주세요'),
-  unit: z.enum(['정액', '평당', '시간', '개']),
+  unit: z.string().refine(
+    (val): val is typeof VALID_UNITS[number] => (VALID_UNITS as readonly string[]).includes(val),
+    '올바른 단위를 선택해주세요'
+  ),
 })
 
 // 서비스 항목 삭제 스키마
@@ -46,7 +51,7 @@ export const createServiceItemAction = action
       unit: parsedInput.unit,
     })
 
-    if (error) throw new Error('서비스 추가에 실패했습니다')
+    if (error) throw new Error(`서비스 추가에 실패했습니다: ${error.message}`)
 
     revalidatePath('/dashboard/services')
     return { success: true }
