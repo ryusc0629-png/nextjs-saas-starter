@@ -51,7 +51,7 @@ export const createServiceItemAction = action
       unit: parsedInput.unit,
     })
 
-    if (error) throw new Error(`서비스 추가에 실패했습니다: ${error.message}`)
+    if (error) throw new Error('[APP] 서비스 추가에 실패했습니다')
 
     revalidatePath('/dashboard/services')
     return { success: true }
@@ -81,7 +81,7 @@ export const deleteServiceItemAction = action
       .eq('id', parsedInput.id)
       .eq('business_id', profile.business_id)
 
-    if (error) throw new Error('서비스 삭제에 실패했습니다')
+    if (error) throw new Error('[APP] 서비스 삭제에 실패했습니다')
 
     revalidatePath('/dashboard/services')
     return { success: true }

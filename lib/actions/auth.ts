@@ -29,7 +29,7 @@ export const loginAction = action
       password: parsedInput.password,
     })
 
-    if (error) throw new Error('이메일 또는 비밀번호가 올바르지 않습니다')
+    if (error) throw new Error('[APP] 이메일 또는 비밀번호가 올바르지 않습니다')
 
     // 업체 등록 여부 확인 — 서비스 롤로 조회 (로그인 직후 세션 쿠키 타이밍 문제 방지)
     const db = createServiceClient()
@@ -59,12 +59,11 @@ export const signupAction = action
     })
 
     if (error) {
-      // 원인 파악용 실제 오류 메시지 노출 (진단 후 한국어로 교체 예정)
       console.error('[signupAction] Supabase error:', error.message, error.code)
       if (error.message.includes('already registered')) {
-        throw new Error('이미 가입된 이메일입니다')
+        throw new Error('[APP] 이미 가입된 이메일입니다')
       }
-      throw new Error(`[Supabase] ${error.message}`)
+      throw new Error('[APP] 회원가입에 실패했습니다. 잠시 후 다시 시도해주세요.')
     }
 
     return { redirectTo: '/onboarding' }

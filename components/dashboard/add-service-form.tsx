@@ -35,7 +35,7 @@ const PRESETS = [
 const schema = z.object({
   name: z.string().min(1, '서비스명을 입력해주세요'),
   category: z.string().optional(),
-  base_price: z.coerce.number().min(0, '0 이상의 금액을 입력해주세요'),
+  base_price: z.string().min(1, '금액을 입력해주세요'),
   unit: z.string().min(1, '단위를 선택해주세요'),
 })
 
@@ -46,13 +46,13 @@ export function AddServiceForm() {
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormInput>({
     resolver: zodResolver(schema),
-    defaultValues: { unit: '정액', base_price: 0 },
+    defaultValues: { unit: '정액', base_price: '0' },
   })
 
   const { execute, isPending } = useAction(createServiceItemAction, {
     onSuccess: () => {
       toast.success('서비스가 추가되었습니다')
-      reset({ unit: '정액', base_price: 0 })
+      reset({ unit: '정액', base_price: '0' })
       setOpen(false)
     },
     onError: ({ error }) => {
@@ -65,7 +65,7 @@ export function AddServiceForm() {
     setValue('name', preset.name)
     setValue('category', preset.category)
     setValue('unit', preset.unit as UnitValue)
-    setValue('base_price', preset.base_price)
+    setValue('base_price', String(preset.base_price))
   }
 
   const currentUnit = watch('unit')
@@ -81,7 +81,7 @@ export function AddServiceForm() {
 
   return (
     <form
-      onSubmit={handleSubmit((data) => execute(data))}
+      onSubmit={handleSubmit((data) => execute({ ...data, base_price: Number(data.base_price) }))}
       className="rounded-lg border bg-card p-4 space-y-4"
     >
       <div className="flex items-center justify-between">

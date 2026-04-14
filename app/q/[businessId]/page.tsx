@@ -21,7 +21,7 @@ export default async function PublicQuotePage({ params }: Props) {
 
   if (!business) notFound()
 
-  // 활성화된 서비스 목록 조회
+  // 활성화된 서비스 목록 조회 (id 포함 — 가격 계산에 사용)
   const { data: services } = await db
     .from('service_items')
     .select('id, name, base_price, unit')
@@ -40,7 +40,7 @@ export default async function PublicQuotePage({ params }: Props) {
           {business.description && (
             <p className="text-muted-foreground text-sm">{business.description}</p>
           )}
-          <p className="text-muted-foreground text-sm">아래 양식을 작성해주시면 빠르게 연락드리겠습니다</p>
+          <p className="text-muted-foreground text-sm">서비스 정보를 입력하시면 즉시 견적을 확인하실 수 있습니다</p>
         </div>
 
         {/* 견적 폼 */}
