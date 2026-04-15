@@ -5,6 +5,7 @@ import { createSafeActionClient } from 'next-safe-action'
 import { createServiceClient } from '@/lib/supabase/server'
 import { generateTierDescriptions } from '@/lib/ai/tier-descriptions'
 import { recommendBundles } from '@/lib/ai/bundle-recommendation'
+import { sendBookingConfirmAlimtalk } from '@/lib/kakao/alimtalk'
 
 // 공개 폼용 액션 클라이언트 (인증 불필요)
 const publicAction = createSafeActionClient({
@@ -284,7 +285,7 @@ export const createBookingAction = publicAction
     // 견적 조회 (pending 상태인지 확인)
     const { data: quote } = await db
       .from('quotes')
-      .select('id, business_id, good_price, better_price, best_price, preferred_date, status')
+      .select('id, business_id, cleaning_type, good_price, better_price, best_price, preferred_date, status')
       .eq('id', parsedInput.quote_id)
       .maybeSingle()
 
@@ -321,6 +322,47 @@ export const createBookingAction = publicAction
       .from('quotes')
       .update({ status: 'booked' })
       .eq('id', quote.id)
+
+    // 예약 ID 조회 (reports 저장 및 알림톡 발송용)
+    const { data: newBooking } = await db
+      .from('bookings')
+      .select('id')
+      .eq('quote_id', quote.id)
+      .maybeSingle()
+
+    // 업체 정보 조회 (알림톡 발송용)
+    const { data: business } = await db
+      .from('businesses')
+      .select('name, phone')
+      .eq('id', quote.business_id)
+      .maybeSingle()
+
+    // 카카오 알림톡 발송 — 퀄리오 단일 채널로 고객사 대신 발송 (실패해도 예약은 정상 완료)
+    if (newBooking && business) {
+      try {
+        await sendBookingConfirmAlimtalk({
+          customerPhone:  parsedInput.customer_phone,
+          businessName:   business.name,
+          businessPhone:  business.phone ?? null,
+          cleaningType:   quote.cleaning_type ?? '청소 서비스',
+          scheduledAt:    scheduledAt,
+          serviceAddress: parsedInput.service_address,
+          selectedTier:   parsedInput.selected_tier as 'good' | 'better' | 'best',
+          finalPrice:     finalPrice,
+        })
+
+        // 발송 성공 시 reports 테이블에 기록
+        await db.from('reports').insert({
+          booking_id:    newBooking.id,
+          business_id:   quote.business_id,
+          kakao_sent_at: new Date().toISOString(),
+        })
+
+        console.log('[Alimtalk] 예약 확정 알림톡 발송 완료:', newBooking.id)
+      } catch (e) {
+        console.error('[Alimtalk] 알림톡 발송 실패 — 예약은 정상 완료됨', e)
+      }
+    }
 
     return { success: true }
   })
