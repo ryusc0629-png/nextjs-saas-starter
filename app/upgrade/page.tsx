@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { UpgradeForm } from '@/components/dashboard/upgrade-form'
+import { LogoutButton } from '@/components/dashboard/logout-button'
 import Link from 'next/link'
 
 // 플랜 결제 페이지 — 대시보드 밖에 위치해야 페이월 무한루프 방지
@@ -37,7 +38,10 @@ export default async function UpgradePage() {
       <header className="border-b">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="font-bold text-xl">퀄리오</Link>
-          <p className="text-sm text-muted-foreground">{businessName}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-muted-foreground">{businessName}</p>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
