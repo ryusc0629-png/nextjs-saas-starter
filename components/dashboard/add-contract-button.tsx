@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createContractAction } from '@/lib/actions/contracts'
+import { FrequencyPicker } from '@/components/dashboard/frequency-picker'
 import { Plus, X } from 'lucide-react'
 
 const schema = z.object({
@@ -34,7 +35,7 @@ interface AddContractButtonProps {
 export function AddContractButton({ customerId, customerName }: AddContractButtonProps) {
   const [open, setOpen] = useState(false)
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormInput>({
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormInput>({
     resolver: zodResolver(schema),
     defaultValues: {
       customer_id: customerId,
@@ -97,8 +98,11 @@ export function AddContractButton({ customerId, customerName }: AddContractButto
 
               <div className="space-y-1">
                 <Label>방문 주기 *</Label>
-                <Input placeholder="예: 주 2회, 격주, 월 1회 등" {...register('frequency')} />
-                {errors.frequency && <p className="text-xs text-destructive">{errors.frequency.message}</p>}
+                <FrequencyPicker
+                  value={watch('frequency') ?? ''}
+                  onChange={(val) => setValue('frequency', val, { shouldValidate: true })}
+                  error={errors.frequency?.message}
+                />
               </div>
 
               <div className="space-y-1">

@@ -2,12 +2,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AddContractForm } from '@/components/dashboard/add-contract-form'
 import { ContractStatusSelect } from '@/components/dashboard/contract-status-select'
-
-const FREQUENCY_LABEL: Record<string, string> = {
-  weekly:   '주 1회',
-  biweekly: '격주 1회',
-  monthly:  '월 1회',
-}
+import { formatFrequency } from '@/lib/utils/frequency'
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
   active:     { label: '활성',  className: 'bg-green-100 text-green-700' },
@@ -121,7 +116,7 @@ export default async function ContractsPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{contract.service_type}</td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {FREQUENCY_LABEL[contract.frequency] ?? contract.frequency}
+                      {formatFrequency(contract.frequency)}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums font-medium">
                       {contract.contract_price.toLocaleString('ko-KR')}원

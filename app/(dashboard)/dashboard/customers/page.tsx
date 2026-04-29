@@ -7,12 +7,7 @@ import { AddContractButton } from '@/components/dashboard/add-contract-button'
 import { ContractStatusSelect } from '@/components/dashboard/contract-status-select'
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
-
-const FREQUENCY_LABEL: Record<string, string> = {
-  weekly:   '주 1회',
-  biweekly: '격주 1회',
-  monthly:  '월 1회',
-}
+import { formatFrequency } from '@/lib/utils/frequency'
 
 export default async function CustomersPage({
   searchParams,
@@ -196,7 +191,7 @@ export default async function CustomersPage({
                           <span className="text-xs font-normal text-muted-foreground ml-1">/ 월</span>
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {activeContract.service_type} · {FREQUENCY_LABEL[activeContract.frequency] ?? activeContract.frequency}
+                          {activeContract.service_type} · {formatFrequency(activeContract.frequency)}
                         </p>
                         <div className="mt-1">
                           <ContractStatusSelect
@@ -216,7 +211,7 @@ export default async function CustomersPage({
                 {!activeContract && customerContracts.length > 0 && (
                   <div className="mt-2 pt-2 border-t">
                     <p className="text-xs text-muted-foreground">
-                      {customerContracts[0]!.service_type} · {FREQUENCY_LABEL[customerContracts[0]!.frequency]} ·{' '}
+                      {customerContracts[0]!.service_type} · {formatFrequency(customerContracts[0]!.frequency)} ·{' '}
                       <span className="text-red-500">
                         {customerContracts[0]!.status === 'terminated' ? '해지됨' : '중단됨'}
                       </span>
