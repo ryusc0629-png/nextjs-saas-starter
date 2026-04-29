@@ -158,3 +158,27 @@ export const createCustomerWithContractAction = action
     revalidatePath('/dashboard')
     return { success: true }
   })
+
+// 고객 삭제
+const deleteCustomerSchema = z.object({
+  customerId: z.string().uuid(),
+})
+
+export const deleteCustomerAction = action
+  .schema(deleteCustomerSchema)
+  .action(async ({ parsedInput }) => {
+    const { db, businessId } = await getAuthenticatedBusinessId()
+
+    // 연결된 contracts는 ON DELETE CASCADE로 자동 삭제됨
+    const { error } = await db
+      .from('customers')
+      .delete()
+      .eq('id', parsedInput.customerId)
+      .eq('business_id', businessId)
+
+    if (error) throw new Error('[APP] 삭제에 실패했습니다')
+
+    revalidatePath('/dashboard/customers')
+    revalidatePath('/dashboard')
+    return { success: true }
+  })

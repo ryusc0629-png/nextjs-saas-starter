@@ -27,7 +27,6 @@ type FormInput = z.infer<typeof schema>
 const CATEGORIES = ['카페', '병원', '학원', '오피스', '상가', '식당', '헬스장', '기타']
 
 interface AddCustomerFormProps {
-  // 리드에서 전환할 때 초기값 전달 (옵션)
   defaultValues?: {
     name?: string
     phone?: string
@@ -35,9 +34,10 @@ interface AddCustomerFormProps {
     category?: string
     lead_id?: string
   }
+  variant?: 'default' | 'outline'
 }
 
-export function AddCustomerForm({ defaultValues }: AddCustomerFormProps) {
+export function AddCustomerForm({ defaultValues, variant = 'default' }: AddCustomerFormProps) {
   const [open, setOpen] = useState(false)
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormInput>({
     resolver: zodResolver(schema),
@@ -60,7 +60,7 @@ export function AddCustomerForm({ defaultValues }: AddCustomerFormProps) {
 
   if (!open) {
     return (
-      <Button onClick={() => setOpen(true)}>
+      <Button variant={variant} onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4 mr-1.5" />
         고객 추가
       </Button>

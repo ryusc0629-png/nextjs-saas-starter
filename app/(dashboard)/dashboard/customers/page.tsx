@@ -1,6 +1,9 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AddCustomerForm } from '@/components/dashboard/add-customer-form'
+import { EditCustomerButton } from '@/components/dashboard/edit-customer-button'
+import { DeleteCustomerButton } from '@/components/dashboard/delete-customer-button'
+import { AddContractButton } from '@/components/dashboard/add-contract-button'
 import { ContractStatusSelect } from '@/components/dashboard/contract-status-select'
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
@@ -9,12 +12,6 @@ const FREQUENCY_LABEL: Record<string, string> = {
   weekly:   '주 1회',
   biweekly: '격주 1회',
   monthly:  '월 1회',
-}
-
-const CONTRACT_STATUS_META: Record<string, { label: string; className: string }> = {
-  active:     { label: '활성',  className: 'bg-green-100 text-green-700' },
-  paused:     { label: '중단',  className: 'bg-yellow-100 text-yellow-700' },
-  terminated: { label: '해지',  className: 'bg-red-100 text-red-600' },
 }
 
 export default async function CustomersPage({
@@ -37,27 +34,27 @@ export default async function CustomersPage({
 
   if (!profile?.business_id) redirect('/onboarding')
 
-  // 고객 목록 + 활성 계약 정보 조인
-  const { data: customers } = await db
-    .from('customers')
-    .select('id, name, phone, address, category, type, notes, created_at')
-    .eq('business_id', profile.business_id)
-    .order('type') // 정기 고객 먼저
-    .order('created_at', { ascending: false })
+  const [
+    { data: customers },
+    { data: contracts },
+  ] = await Promise.all([
+    db.from('customers')
+      .select('id, name, phone, address, category, type, notes, created_at')
+      .eq('business_id', profile.business_id)
+      .order('type') // 정기 고객 먼저
+      .order('created_at', { ascending: false }),
 
-  // 계약 목록 (고객별 최신 활성 계약)
-  const { data: contracts } = await db
-    .from('contracts')
-    .select('id, customer_id, service_type, frequency, contract_price, status')
-    .eq('business_id', profile.business_id)
-    .order('created_at', { ascending: false })
+    db.from('contracts')
+      .select('id, customer_id, service_type, frequency, contract_price, status')
+      .eq('business_id', profile.business_id)
+      .order('created_at', { ascending: false }),
+  ])
 
   // 고객별 계약 매핑
-  const contractByCustomer: Record<string, typeof contracts> = {}
+  type ContractRow = NonNullable<typeof contracts>[number]
+  const contractByCustomer: Record<string, ContractRow[]> = {}
   for (const c of contracts ?? []) {
-    if (!contractByCustomer[c.customer_id]) {
-      contractByCustomer[c.customer_id] = []
-    }
+    if (!contractByCustomer[c.customer_id]) contractByCustomer[c.customer_id] = []
     contractByCustomer[c.customer_id]!.push(c)
   }
 
@@ -85,7 +82,8 @@ export default async function CustomersPage({
             정기·일회성 고객과 계약 현황을 한눈에 확인하세요
           </p>
         </div>
-        <AddCustomerForm />
+        {/* 직접 추가용 — 주요 동선은 CRM → 고객 등록 */}
+        <AddCustomerForm variant="outline" />
       </div>
 
       {/* 매출 요약 카드 */}
@@ -108,9 +106,9 @@ export default async function CustomersPage({
       {/* 탭 */}
       <div className="flex gap-1 border-b">
         {[
-          { key: undefined,   label: `전체 (${totalCount})`,       href: '/dashboard/customers' },
+          { key: undefined,   label: `전체 (${totalCount})`,         href: '/dashboard/customers' },
           { key: 'recurring', label: `정기 고객 (${recurringCount})`, href: '/dashboard/customers?type=recurring' },
-          { key: 'one_time',  label: `일회성 (${oneTimeCount})`,   href: '/dashboard/customers?type=one_time' },
+          { key: 'one_time',  label: `일회성 (${oneTimeCount})`,     href: '/dashboard/customers?type=one_time' },
         ].map((tab) => {
           const isActive = (filterType ?? undefined) === tab.key
           return (
@@ -149,15 +147,16 @@ export default async function CustomersPage({
             const customerContracts = contractByCustomer[customer.id] ?? []
             const activeContract = customerContracts.find((c) => c.status === 'active')
             const isRecurring = customer.type === 'recurring'
+            const hasAnyContract = customerContracts.length > 0
 
             return (
               <div
                 key={customer.id}
-                className={`rounded-lg border p-4 hover:border-primary/30 transition-colors ${
+                className={`rounded-lg border p-4 hover:border-primary/20 transition-colors ${
                   isRecurring ? 'border-l-4 border-l-blue-400' : ''
                 }`}
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
                   {/* 고객 정보 */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -177,42 +176,51 @@ export default async function CustomersPage({
                     )}
                   </div>
 
-                  {/* 계약 정보 */}
-                  {activeContract ? (
-                    <div className="shrink-0 text-right">
-                      <p className="text-lg font-bold tabular-nums">
-                        {activeContract.contract_price.toLocaleString('ko-KR')}원
-                        <span className="text-xs font-normal text-muted-foreground ml-1">/ 월</span>
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {activeContract.service_type} · {FREQUENCY_LABEL[activeContract.frequency] ?? activeContract.frequency}
-                      </p>
-                      <div className="mt-1 flex justify-end">
-                        <ContractStatusSelect
-                          contractId={activeContract.id}
-                          currentStatus={activeContract.status}
-                        />
+                  {/* 계약 정보 + 액션 버튼 */}
+                  <div className="shrink-0 flex flex-col items-end gap-2">
+                    {/* 수정/삭제 버튼 */}
+                    <div className="flex items-center gap-1">
+                      <EditCustomerButton customer={customer} />
+                      <DeleteCustomerButton
+                        customerId={customer.id}
+                        customerName={customer.name}
+                        hasContract={hasAnyContract}
+                      />
+                    </div>
+
+                    {/* 계약 정보 */}
+                    {activeContract ? (
+                      <div className="text-right">
+                        <p className="text-lg font-bold tabular-nums">
+                          {activeContract.contract_price.toLocaleString('ko-KR')}원
+                          <span className="text-xs font-normal text-muted-foreground ml-1">/ 월</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {activeContract.service_type} · {FREQUENCY_LABEL[activeContract.frequency] ?? activeContract.frequency}
+                        </p>
+                        <div className="mt-1">
+                          <ContractStatusSelect
+                            contractId={activeContract.id}
+                            currentStatus={activeContract.status}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ) : isRecurring ? (
-                    <div className="shrink-0 text-right">
-                      <p className="text-xs text-muted-foreground">계약 정보 없음</p>
-                    </div>
-                  ) : null}
+                    ) : isRecurring ? (
+                      // 정기 고객인데 계약 없는 경우 → 계약 추가 버튼
+                      <AddContractButton customerId={customer.id} customerName={customer.name} />
+                    ) : null}
+                  </div>
                 </div>
 
-                {/* 해지/중단된 계약이 있는 경우 표시 */}
+                {/* 비활성 계약 표시 (해지/중단) */}
                 {!activeContract && customerContracts.length > 0 && (
                   <div className="mt-2 pt-2 border-t">
-                    {customerContracts.slice(0, 1).map((c) => {
-                      const meta = CONTRACT_STATUS_META[c.status]
-                      return (
-                        <p key={c.id} className="text-xs text-muted-foreground">
-                          {c.service_type} · {FREQUENCY_LABEL[c.frequency]} ·{' '}
-                          <span className={`font-medium ${meta?.className ? '' : ''}`}>{meta?.label}</span>
-                        </p>
-                      )
-                    })}
+                    <p className="text-xs text-muted-foreground">
+                      {customerContracts[0]!.service_type} · {FREQUENCY_LABEL[customerContracts[0]!.frequency]} ·{' '}
+                      <span className="text-red-500">
+                        {customerContracts[0]!.status === 'terminated' ? '해지됨' : '중단됨'}
+                      </span>
+                    </p>
                   </div>
                 )}
               </div>
