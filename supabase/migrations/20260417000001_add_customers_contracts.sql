@@ -17,12 +17,19 @@ CREATE TABLE IF NOT EXISTS public.customers (
 );
 
 -- updated_at 자동 갱신 트리거
+DROP TRIGGER IF EXISTS set_customers_updated_at ON public.customers;
 CREATE TRIGGER set_customers_updated_at
   BEFORE UPDATE ON public.customers
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- RLS 활성화
 ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+
+-- 기존 정책 제거 후 재생성
+DROP POLICY IF EXISTS "customers_select" ON public.customers;
+DROP POLICY IF EXISTS "customers_insert" ON public.customers;
+DROP POLICY IF EXISTS "customers_update" ON public.customers;
+DROP POLICY IF EXISTS "customers_delete" ON public.customers;
 
 CREATE POLICY "customers_select" ON public.customers
   FOR SELECT USING (business_id = public.get_my_business_id());
@@ -37,8 +44,8 @@ CREATE POLICY "customers_delete" ON public.customers
   FOR DELETE USING (business_id = public.get_my_business_id());
 
 -- 인덱스
-CREATE INDEX idx_customers_business_id ON public.customers(business_id);
-CREATE INDEX idx_customers_type ON public.customers(business_id, type);
+CREATE INDEX IF NOT EXISTS idx_customers_business_id ON public.customers(business_id);
+CREATE INDEX IF NOT EXISTS idx_customers_type ON public.customers(business_id, type);
 
 -- 2. 정기계약 테이블
 CREATE TABLE IF NOT EXISTS public.contracts (
@@ -59,12 +66,19 @@ CREATE TABLE IF NOT EXISTS public.contracts (
 );
 
 -- updated_at 자동 갱신 트리거
+DROP TRIGGER IF EXISTS set_contracts_updated_at ON public.contracts;
 CREATE TRIGGER set_contracts_updated_at
   BEFORE UPDATE ON public.contracts
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- RLS 활성화
 ALTER TABLE public.contracts ENABLE ROW LEVEL SECURITY;
+
+-- 기존 정책 제거 후 재생성
+DROP POLICY IF EXISTS "contracts_select" ON public.contracts;
+DROP POLICY IF EXISTS "contracts_insert" ON public.contracts;
+DROP POLICY IF EXISTS "contracts_update" ON public.contracts;
+DROP POLICY IF EXISTS "contracts_delete" ON public.contracts;
 
 CREATE POLICY "contracts_select" ON public.contracts
   FOR SELECT USING (business_id = public.get_my_business_id());
@@ -79,9 +93,9 @@ CREATE POLICY "contracts_delete" ON public.contracts
   FOR DELETE USING (business_id = public.get_my_business_id());
 
 -- 인덱스
-CREATE INDEX idx_contracts_business_id ON public.contracts(business_id);
-CREATE INDEX idx_contracts_customer_id ON public.contracts(customer_id);
-CREATE INDEX idx_contracts_status ON public.contracts(business_id, status);
+CREATE INDEX IF NOT EXISTS idx_contracts_business_id ON public.contracts(business_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_customer_id ON public.contracts(customer_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_status ON public.contracts(business_id, status);
 
 -- 3. bookings 테이블에 customer_id FK 추가 (nullable)
 ALTER TABLE public.bookings

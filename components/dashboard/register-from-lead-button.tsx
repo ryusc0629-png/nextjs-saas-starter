@@ -28,12 +28,6 @@ const schema = z.object({
 
 type FormInput = z.infer<typeof schema>
 
-const FREQUENCY_OPTIONS = [
-  { value: 'weekly',   label: '주 1회' },
-  { value: 'biweekly', label: '격주 1회' },
-  { value: 'monthly',  label: '월 1회' },
-]
-
 const SERVICE_TYPES = ['일반청소', '입주청소', '사무실 청소', '공장 청소', '기타']
 
 interface RegisterFromLeadButtonProps {
@@ -59,7 +53,7 @@ export function RegisterFromLeadButton({ lead, alreadyRegistered }: RegisterFrom
       category: lead.category ?? '',
       lead_id: lead.id,
       hasContract: '',
-      frequency: 'monthly',
+      frequency: '',
     },
   })
 
@@ -169,17 +163,7 @@ export function RegisterFromLeadButton({ lead, alreadyRegistered }: RegisterFrom
                     {/* 방문 주기 */}
                     <div className="space-y-1">
                       <Label>방문 주기</Label>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {FREQUENCY_OPTIONS.map((opt) => (
-                          <label
-                            key={opt.value}
-                            className="flex items-center justify-center rounded-lg border p-2 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 text-sm"
-                          >
-                            <input type="radio" value={opt.value} {...register('frequency')} className="sr-only" />
-                            {opt.label}
-                          </label>
-                        ))}
-                      </div>
+                      <Input placeholder="예: 주 2회, 격주, 월 1회 등" {...register('frequency')} />
                     </div>
 
                     {/* 월 계약금액 */}

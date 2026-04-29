@@ -25,11 +25,6 @@ const schema = z.object({
 type FormInput = z.infer<typeof schema>
 
 const SERVICE_TYPES = ['일반청소', '입주청소', '사무실 청소', '공장 청소', '기타']
-const FREQUENCY_OPTIONS = [
-  { value: 'weekly', label: '주 1회' },
-  { value: 'biweekly', label: '격주 1회' },
-  { value: 'monthly', label: '월 1회' },
-]
 
 interface Customer {
   id: string
@@ -49,7 +44,7 @@ export function AddContractForm({ customers, defaultCustomerId }: AddContractFor
     resolver: zodResolver(schema),
     defaultValues: {
       customer_id: defaultCustomerId ?? '',
-      frequency: 'monthly',
+      frequency: '',
     },
   })
 
@@ -121,17 +116,8 @@ export function AddContractForm({ customers, defaultCustomerId }: AddContractFor
           {/* 방문 주기 */}
           <div className="space-y-1">
             <Label>방문 주기 *</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {FREQUENCY_OPTIONS.map((opt) => (
-                <label
-                  key={opt.value}
-                  className="flex items-center justify-center rounded-lg border p-2.5 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 text-sm"
-                >
-                  <input type="radio" value={opt.value} {...register('frequency')} className="sr-only" />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
+            <Input placeholder="예: 주 2회, 격주, 월 1회 등" {...register('frequency')} />
+            {errors.frequency && <p className="text-xs text-destructive">{errors.frequency.message}</p>}
           </div>
 
           {/* 월 계약금액 */}

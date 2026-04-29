@@ -26,10 +26,7 @@ async function getAuthenticatedBusinessId() {
 const createContractSchema = z.object({
   customer_id: z.string().uuid('고객을 선택해주세요'),
   service_type: z.string().min(1, '서비스 유형을 입력해주세요'),
-  frequency: z.string().refine(
-    (v) => ['weekly', 'biweekly', 'monthly'].includes(v),
-    '유효하지 않은 주기입니다'
-  ),
+  frequency: z.string().min(1, '방문 주기를 입력해주세요'),
   contract_price: z.coerce.number().min(1, '계약금액을 입력해주세요'),
   start_date: z.string().min(1, '시작일을 입력해주세요'),
   end_date: z.string().optional(),

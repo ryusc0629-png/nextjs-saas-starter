@@ -24,12 +24,19 @@ begin
 end;
 $$;
 
+drop trigger if exists leads_updated_at on public.leads;
 create trigger leads_updated_at
   before update on public.leads
   for each row execute function public.set_updated_at();
 
 -- RLS 활성화
 alter table public.leads enable row level security;
+
+-- 기존 정책 제거 후 재생성
+drop policy if exists "leads_select" on public.leads;
+drop policy if exists "leads_insert" on public.leads;
+drop policy if exists "leads_update" on public.leads;
+drop policy if exists "leads_delete" on public.leads;
 
 -- SELECT: 본인 업체의 리드만 조회
 create policy "leads_select" on public.leads
@@ -47,7 +54,7 @@ create policy "leads_update" on public.leads
 create policy "leads_delete" on public.leads
   for delete using (business_id = public.get_my_business_id());
 
--- 인덱스
-create index leads_business_id_idx on public.leads (business_id);
-create index leads_status_idx on public.leads (business_id, status);
-create index leads_follow_up_idx on public.leads (business_id, next_follow_up_date);
+-- 인덱스 (이미 존재하면 스킵)
+create index if not exists leads_business_id_idx on public.leads (business_id);
+create index if not exists leads_status_idx on public.leads (business_id, status);
+create index if not exists leads_follow_up_idx on public.leads (business_id, next_follow_up_date);
