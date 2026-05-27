@@ -153,6 +153,7 @@ export function UpgradeForm({ businessId, currentPlan, businessName }: UpgradeFo
           )}
         </Button>
         <p className="text-xs text-muted-foreground text-center">
+          결제 1건당 <strong>1개월(30일)</strong> 이용권이 제공됩니다. 자동 갱신 없음.<br />
           토스페이먼츠를 통해 안전하게 처리됩니다.
           결제 후 7일 이내 미사용 시 전액 환불 가능합니다.
         </p>

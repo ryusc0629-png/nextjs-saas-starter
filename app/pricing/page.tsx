@@ -37,6 +37,13 @@ export default function PricingPage() {
           </p>
         </div>
 
+        {/* 서비스 제공 기간 안내 — 토스페이먼츠 심사 요건 */}
+        <div className="max-w-2xl mx-auto mb-10 rounded-lg border border-border bg-muted/40 px-6 py-4 text-sm text-muted-foreground text-center">
+          <p>
+            <span className="font-semibold text-foreground">서비스 제공 기간:</span> 결제 1건당 <span className="font-semibold text-foreground">1개월</span> (30일) 이용권 제공 · 자동 갱신 없음 · 언제든지 해지 가능
+          </p>
+        </div>
+
         {/* 플랜 카드 */}
         <div className="grid md:grid-cols-3 gap-6 mb-16">
           {PAID_PLANS.map((plan) => (
@@ -65,6 +72,8 @@ export default function PricingPage() {
                 <div className="text-3xl font-bold mb-2">
                   {formatPrice(plan.price)}
                 </div>
+                {/* 1회 결제 = 1개월 서비스 명시 */}
+                <p className="text-xs text-muted-foreground mb-1">1회 결제 시 1개월(30일) 이용</p>
                 <p className="text-sm text-muted-foreground">{plan.target}</p>
                 <p className="text-sm font-medium mt-2 text-foreground">{plan.description}</p>
               </div>
@@ -98,16 +107,20 @@ export default function PricingPage() {
           <div className="space-y-6">
             {[
               {
+                q: '서비스 제공 기간은 얼마인가요?',
+                a: '결제 1건당 1개월(30일) 이용권이 제공됩니다. 이용 기간은 결제일로부터 30일이며, 최대 1개월을 초과하지 않습니다. 자동 갱신(정기결제)은 없으며, 다음 달 이용을 원하시면 직접 재결제하시면 됩니다.',
+              },
+              {
                 q: '플랜은 언제든지 변경할 수 있나요?',
-                a: '네, 언제든지 업그레이드하거나 다운그레이드할 수 있습니다. 변경 사항은 다음 결제일부터 적용됩니다.',
+                a: '네, 언제든지 업그레이드하거나 다운그레이드할 수 있습니다. 변경 사항은 다음 결제 시 적용됩니다.',
+              },
+              {
+                q: '해지는 어떻게 하나요?',
+                a: '별도 해지 신청 없이 이용 기간(30일) 만료 후 재결제를 하지 않으면 자동으로 서비스가 종료됩니다. 이용 중 즉시 해지를 원하시면 대시보드 설정에서 구독 취소가 가능합니다.',
               },
               {
                 q: '환불은 어떻게 되나요?',
                 a: '결제 후 7일 이내 미사용 시 전액 환불이 가능합니다. 이용 내역이 있는 경우 남은 기간 일할 계산으로 환불됩니다.',
-              },
-              {
-                q: '베타 기간이 끝나면 어떻게 되나요?',
-                a: '베타 기간 종료 1개월 전에 이메일로 안내드립니다. 유료 플랜으로 전환하지 않으면 서비스 이용이 제한될 수 있습니다.',
               },
               {
                 q: '결제 수단은 무엇을 지원하나요?',
