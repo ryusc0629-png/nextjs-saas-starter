@@ -59,6 +59,16 @@ function readingTime(content: string): number {
 }
 
 // 마크다운 → React 요소 렌더링 (## 헤더 anchor 포함)
+// **bold** 인라인 마크다운 → <strong> 변환
+function renderInline(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/)
+  return parts.map((part, i) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={i} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>
+      : part
+  )
+}
+
 function renderContent(content: string) {
   const blocks = content.split(/\n\n+/)
   return blocks.map((block, i) => {
@@ -69,7 +79,7 @@ function renderContent(content: string) {
       const text = trimmed.replace(/^## /, '')
       return (
         <h2 key={i} id={toAnchorId(text)} className="text-xl font-bold mt-10 mb-3 scroll-mt-20">
-          {text}
+          {renderInline(text)}
         </h2>
       )
     }
@@ -77,7 +87,7 @@ function renderContent(content: string) {
       const text = trimmed.replace(/^### /, '')
       return (
         <h3 key={i} id={toAnchorId(text)} className="text-base font-semibold mt-6 mb-2 scroll-mt-20">
-          {text}
+          {renderInline(text)}
         </h3>
       )
     }
@@ -91,7 +101,7 @@ function renderContent(content: string) {
           {listLines.map((line, j) => (
             <li key={j} className="flex items-start gap-2.5 text-muted-foreground text-sm">
               <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-              <span className="leading-relaxed">{line.replace(/^- /, '')}</span>
+              <span className="leading-relaxed">{renderInline(line.replace(/^- /, ''))}</span>
             </li>
           ))}
         </ul>
@@ -103,7 +113,7 @@ function renderContent(content: string) {
       return (
         <blockquote key={i} className="border-l-4 border-primary/40 pl-4 py-1 my-4 bg-muted/40 rounded-r-lg">
           <p className="text-sm text-muted-foreground italic leading-relaxed">
-            {trimmed.replace(/^> /, '')}
+            {renderInline(trimmed.replace(/^> /, ''))}
           </p>
         </blockquote>
       )
@@ -111,7 +121,7 @@ function renderContent(content: string) {
 
     return (
       <p key={i} className="text-muted-foreground text-sm leading-7">
-        {trimmed}
+        {renderInline(trimmed)}
       </p>
     )
   })
