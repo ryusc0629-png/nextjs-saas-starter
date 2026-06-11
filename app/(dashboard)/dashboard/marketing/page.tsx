@@ -1,6 +1,8 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { PostList } from './post-list'
+import { getAutoPostLimit } from '@/lib/config/plans'
+import type { PlanId } from '@/lib/config/plans'
 
 export default async function MarketingPage() {
   const authClient = await createClient()
@@ -16,8 +18,8 @@ export default async function MarketingPage() {
 
   if (!profile?.business_id) redirect('/onboarding')
 
-  // 업체 slug + 포스트 목록 병렬 조회
-  const [businessResult, postsResult] = await Promise.all([
+  // 업체 slug + 포스트 목록 + 구독 플랜 병렬 조회
+  const [businessResult, postsResult, subResult] = await Promise.all([
     db
       .from('businesses')
       .select('slug, name, monthly_post_target')
@@ -28,10 +30,18 @@ export default async function MarketingPage() {
       .select('id, slug, title, summary, published, ai_generated, published_at')
       .eq('business_id', profile.business_id)
       .order('published_at', { ascending: false }),
+    db
+      .from('subscriptions')
+      .select('plan')
+      .eq('business_id', profile.business_id)
+      .eq('status', 'active')
+      .maybeSingle(),
   ])
 
   const business = businessResult.data
   const posts = postsResult.data ?? []
+  const planId = ((subResult.data?.plan as PlanId) ?? 'beta')
+  const autoPostLimit = getAutoPostLimit(planId)
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -47,6 +57,8 @@ export default async function MarketingPage() {
         businessSlug={business?.slug ?? null}
         businessId={profile.business_id}
         monthlyTarget={business?.monthly_post_target ?? 0}
+        autoPostLimit={autoPostLimit}
+        planId={planId}
       />
     </div>
   )

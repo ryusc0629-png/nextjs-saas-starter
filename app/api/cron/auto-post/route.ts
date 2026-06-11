@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { generatePostContent, generateTopicSuggestions } from '@/lib/ai/geo-content'
+import { getAutoPostLimit } from '@/lib/config/plans'
+import type { PlanId } from '@/lib/config/plans'
 
 // Vercel Cron: 매일 00:00 UTC (한국 오전 9시) 실행
 // vercel.json에 등록된 cron만 호출 가능 — CRON_SECRET으로 인증
@@ -56,6 +58,18 @@ export async function GET(request: NextRequest) {
 
   for (const business of businesses) {
     try {
+      // 구독 플랜 조회 → 실제 한도 계산 (설정값이 플랜 한도 초과 방지)
+      const { data: sub } = await db
+        .from('subscriptions')
+        .select('plan')
+        .eq('business_id', business.id)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      const planId = ((sub?.plan as PlanId) ?? 'beta')
+      const planLimit = getAutoPostLimit(planId)
+      const effectiveTarget = Math.min(business.monthly_post_target, planLimit)
+
       // 이번 달 발행 건수 확인
       const monthStart = new Date(year, month - 1, 1).toISOString()
       const { count } = await db
@@ -67,7 +81,7 @@ export async function GET(request: NextRequest) {
 
       const postsThisMonth = count ?? 0
 
-      if (!shouldPostToday(postsThisMonth, business.monthly_post_target, dayOfMonth, daysInMonth)) {
+      if (!shouldPostToday(postsThisMonth, effectiveTarget, dayOfMonth, daysInMonth)) {
         results.push({ businessId: business.id, action: 'skipped' })
         continue
       }

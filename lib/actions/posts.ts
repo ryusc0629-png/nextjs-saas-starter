@@ -5,6 +5,8 @@ import { action } from '@/lib/safe-action'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generatePostContent, generateTopicSuggestions } from '@/lib/ai/geo-content'
 import { revalidatePath } from 'next/cache'
+import { getAutoPostLimit } from '@/lib/config/plans'
+import type { PlanId } from '@/lib/config/plans'
 
 // 공통: 현재 유저의 business_id 조회
 async function getBusinessId() {
@@ -200,13 +202,28 @@ export const getTopicSuggestionsAction = action
     return { suggestions }
   })
 
-// 월간 자동 발행 목표 설정 액션
+// 월간 자동 발행 목표 설정 액션 — 플랜 한도 서버 검증 포함
 export const setMonthlyTargetAction = action
   .schema(z.object({
     target: z.number().int().min(0).max(60),
   }))
   .action(async ({ parsedInput }) => {
     const { db, businessId } = await getBusinessId()
+
+    // 현재 구독 플랜 조회 → 한도 확인
+    const { data: sub } = await db
+      .from('subscriptions')
+      .select('plan')
+      .eq('business_id', businessId)
+      .eq('status', 'active')
+      .maybeSingle()
+
+    const planId = ((sub?.plan as PlanId) ?? 'beta')
+    const limit = getAutoPostLimit(planId)
+
+    if (parsedInput.target > limit) {
+      throw new Error(`[APP] 현재 플랜(${planId})에서는 최대 월 ${limit}건까지 설정할 수 있어요`)
+    }
 
     const { error } = await db
       .from('businesses')
@@ -216,7 +233,7 @@ export const setMonthlyTargetAction = action
     if (error) throw new Error('[APP] 설정 저장에 실패했습니다')
 
     revalidatePath('/dashboard/marketing')
-    return { success: true }
+    return { success: true, limit }
   })
 
 // 포스트 삭제 액션

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Sparkles, Plus, ExternalLink, Trash2, Eye, EyeOff, Loader2, ImagePlus, X, TrendingUp, ChevronRight, CheckCircle2, RefreshCw, Zap } from 'lucide-react'
+import { Sparkles, Plus, ExternalLink, Trash2, Eye, EyeOff, Loader2, ImagePlus, X, TrendingUp, ChevronRight, CheckCircle2, RefreshCw, Zap, Lock } from 'lucide-react'
 import { PostEditor } from './post-editor'
 import { toast } from 'sonner'
 
@@ -74,11 +74,13 @@ interface PostListProps {
   businessSlug: string | null
   businessId: string
   monthlyTarget: number
+  autoPostLimit: number
+  planId: string
 }
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://qualio.co.kr'
 
-export function PostList({ posts: initialPosts, businessSlug, businessId, monthlyTarget: initialTarget }: PostListProps) {
+export function PostList({ posts: initialPosts, businessSlug, businessId, monthlyTarget: initialTarget, autoPostLimit, planId }: PostListProps) {
   const [posts] = useState(initialPosts)
   const [showGenerator, setShowGenerator] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
@@ -266,23 +268,32 @@ export function PostList({ posts: initialPosts, businessSlug, businessId, monthl
           <span className="text-xs text-muted-foreground ml-1">매일 오전 9시 자동으로 발행해요</span>
         </div>
         <div className="flex flex-wrap gap-2">
-          {[0, 5, 10, 20, 30].map((n) => (
-            <button
-              key={n}
-              onClick={() => {
-                setMonthlyTarget(n)
-                saveTarget({ target: n })
-              }}
-              disabled={isSavingTarget}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                monthlyTarget === n
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-white text-foreground border-border hover:border-primary/50'
-              }`}
-            >
-              {n === 0 ? '꺼짐' : `월 ${n}건`}
-            </button>
-          ))}
+          {[0, 5, 10, 20, 30].map((n) => {
+            const isLocked = n > autoPostLimit
+            const isSelected = monthlyTarget === n
+            return (
+              <button
+                key={n}
+                onClick={() => {
+                  if (isLocked) return
+                  setMonthlyTarget(n)
+                  saveTarget({ target: n })
+                }}
+                disabled={isSavingTarget || isLocked}
+                title={isLocked ? `${planId} 플랜 한도 초과 (최대 월 ${autoPostLimit}건)` : undefined}
+                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-1.5 ${
+                  isLocked
+                    ? 'bg-slate-50 text-muted-foreground border-border cursor-not-allowed opacity-50'
+                    : isSelected
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-white text-foreground border-border hover:border-primary/50'
+                }`}
+              >
+                {isLocked && <Lock className="h-3 w-3" />}
+                {n === 0 ? '꺼짐' : `월 ${n}건`}
+              </button>
+            )
+          })}
           {isSavingTarget && <Loader2 className="h-4 w-4 animate-spin self-center text-muted-foreground" />}
         </div>
         {monthlyTarget > 0 && (
@@ -290,6 +301,12 @@ export function PostList({ posts: initialPosts, businessSlug, businessId, monthl
             약 {Math.round(30 / monthlyTarget)}일마다 1건 — 매달 {monthlyTarget}건 자동 발행됩니다
           </p>
         )}
+        <p className="text-xs text-muted-foreground mt-1">
+          현재 플랜: <span className="font-medium">{planId}</span> — 최대 월 {autoPostLimit}건
+          {autoPostLimit < 30 && (
+            <a href="/upgrade" className="ml-1.5 text-primary hover:underline">더 많이 발행하려면 업그레이드 →</a>
+          )}
+        </p>
       </div>
 
       {/* ── 이번 달 인기 주제 추천 ── */}
