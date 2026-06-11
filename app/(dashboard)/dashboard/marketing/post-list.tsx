@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Sparkles, Plus, ExternalLink, Trash2, Eye, EyeOff, Loader2, ImagePlus, X, TrendingUp, ChevronRight, CheckCircle2 } from 'lucide-react'
+import { Sparkles, Plus, ExternalLink, Trash2, Eye, EyeOff, Loader2, ImagePlus, X, TrendingUp, ChevronRight, CheckCircle2, RefreshCw } from 'lucide-react'
 import { PostEditor } from './post-editor'
 import { toast } from 'sonner'
 
@@ -15,6 +15,48 @@ interface TopicSuggestion {
   title: string
   reason: string
   topic: string
+}
+
+interface SuggestionCache {
+  weekKey: string
+  suggestions: TopicSuggestion[]
+  completedTopics: string[]
+}
+
+// 이번 주 캐시 키 — 업체별, 주별 고유
+function getWeekKey(businessId: string): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const startOfYear = new Date(year, 0, 1)
+  const week = Math.ceil(
+    ((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7
+  )
+  return `qualio_suggestions_${businessId}_${year}_w${week}`
+}
+
+function loadCache(businessId: string): SuggestionCache | null {
+  try {
+    const raw = localStorage.getItem('qualio_topic_cache')
+    if (!raw) return null
+    const cache = JSON.parse(raw) as SuggestionCache
+    if (cache.weekKey !== getWeekKey(businessId)) return null  // 주가 바뀌면 무효
+    return cache
+  } catch {
+    return null
+  }
+}
+
+function saveCache(businessId: string, suggestions: TopicSuggestion[], completedTopics: string[]) {
+  try {
+    const cache: SuggestionCache = {
+      weekKey: getWeekKey(businessId),
+      suggestions,
+      completedTopics,
+    }
+    localStorage.setItem('qualio_topic_cache', JSON.stringify(cache))
+  } catch {
+    // localStorage 저장 실패는 조용히 무시
+  }
 }
 
 interface Post {
@@ -58,7 +100,10 @@ export function PostList({ posts: initialPosts, businessSlug, businessId }: Post
     getTopicSuggestionsAction,
     {
       onSuccess: ({ data }) => {
-        if (data?.suggestions) setSuggestions(data.suggestions)
+        if (data?.suggestions) {
+          setSuggestions(data.suggestions)
+          saveCache(businessId, data.suggestions, [])
+        }
       },
       onError: () => {
         // 조용히 실패 — 추천이 없어도 사용에 지장 없음
@@ -66,18 +111,41 @@ export function PostList({ posts: initialPosts, businessSlug, businessId }: Post
     }
   )
 
+  // 마운트 시: 캐시 우선 — 없을 때만 AI 호출
   useEffect(() => {
-    fetchSuggestions({})
+    const cached = loadCache(businessId)
+    if (cached) {
+      setSuggestions(cached.suggestions)
+      setCompletedTopics(cached.completedTopics)
+    } else {
+      fetchSuggestions({})
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // 새로 기획하기 — 캐시 무효화 후 재호출
+  const handleRefreshSuggestions = () => {
+    try { localStorage.removeItem('qualio_topic_cache') } catch { /* 무시 */ }
+    setSuggestions(null)
+    setCompletedTopics([])
+    fetchSuggestions({})
+  }
 
   const { execute: generatePost, isPending: isGenerating } = useAction(generatePostAction, {
     onSuccess: ({ data }) => {
       if (data?.postContent) {
         toast.success('포스트가 생성됐습니다!')
-        // 추천 카드에서 올린 경우 → 완료 표시
+        // 추천 카드에서 올린 경우 → 완료 표시 + 캐시 업데이트
         if (uploadingTopicRef.current) {
-          setCompletedTopics((prev) => [...prev, uploadingTopicRef.current!])
+          setCompletedTopics((prev) => {
+            const next = [...prev, uploadingTopicRef.current!]
+            // 완료 목록도 캐시에 반영 (페이지 리로드 후에도 유지)
+            setSuggestions((s) => {
+              if (s) saveCache(businessId, s, next)
+              return s
+            })
+            return next
+          })
         }
         uploadingTopicRef.current = null
         setUploadingTopic(null)
@@ -172,9 +240,17 @@ export function PostList({ posts: initialPosts, businessSlug, businessId }: Post
         <div className="flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-primary" />
           <p className="font-semibold text-sm">
-            {currentMonth}월에 소비자들이 많이 찾는 주제예요
+            이번 주 포스팅 기획 — {currentMonth}월 인기 주제 10개
           </p>
-          <span className="text-xs text-muted-foreground ml-auto">바로 올리면 검색 노출에 유리해요</span>
+          <button
+            onClick={handleRefreshSuggestions}
+            disabled={isLoadingSuggestions}
+            className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+            title="이번 주 주제 새로 기획하기"
+          >
+            <RefreshCw className={`h-3 w-3 ${isLoadingSuggestions ? 'animate-spin' : ''}`} />
+            새로 기획하기
+          </button>
         </div>
 
         {/* 로딩 중 */}
@@ -188,7 +264,7 @@ export function PostList({ posts: initialPosts, businessSlug, businessId }: Post
         {/* 추천 카드 목록 */}
         {suggestions && suggestions.length > 0 && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {suggestions.slice(0, 5).map((s) => {
+            {suggestions.map((s) => {
               const isThisUploading = isGenerating && uploadingTopic === s.topic
               const isDone = completedTopics.includes(s.topic)
               return (
